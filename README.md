@@ -4,6 +4,16 @@ A browser-native image format converter and compressor for Chromium browsers. Th
 
 ---
 
+## Interface Preview
+
+### Start Page
+![Start Page](assets/image1-startpage.png)
+
+### Conversion Page
+![Conversion Page](assets/image2-convertimage.png)
+
+---
+
 ## Architectural Overview
 
 Image Format Converter & Compressor launches a dedicated, full-featured workspace tab upon clicking the extension icon in the Chromium toolbar. All image decoding, canvas manipulation, format transcoding, resizing, live preview rendering, and ZIP packaging run client-side in the browser engine.
@@ -40,6 +50,9 @@ Image Format Converter & Compressor launches a dedicated, full-featured workspac
 ├── manifest.json         # Extension metadata and configuration
 ├── background.js        # Service worker for workspace tab orchestration
 ├── app.html             # Standalone converter workbench application
+├── assets/
+│   ├── image1-startpage.png     # Initial workspace screenshot
+│   └── image2-convertimage.png  # Live conversion preview screenshot
 ├── css/
 │   └── app.css          # Dark Modern design system (#1f1f1f theme)
 ├── js/

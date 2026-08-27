@@ -744,7 +744,7 @@
     if (!selected) {
       if (dom.inspectorEmpty) {
         dom.inspectorEmpty.style.display = 'block';
-        if (dom.inspectorEmptyText) dom.inspectorEmptyText.textContent = 'Select an item from the queue to view technical details.';
+        if (dom.inspectorEmptyText) dom.inspectorEmptyText.textContent = 'Select an item to view details.';
       }
       if (dom.inspectorBody) dom.inspectorBody.style.display = 'none';
       return;

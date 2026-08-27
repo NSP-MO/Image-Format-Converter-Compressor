@@ -681,13 +681,19 @@ body {
 }
 
 .inspector-empty {
-  padding: 24px 12px;
+  padding: 16px 10px;
   text-align: center;
   color: var(--text-muted);
   font-size: 12px;
-  line-height: 1.5;
   border: 1px dashed var(--border-color);
   border-radius: var(--border-radius);
+}
+
+.inspector-empty p {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .inspector-body {
