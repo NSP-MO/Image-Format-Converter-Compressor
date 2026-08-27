@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Format Converter &amp; Compressor</title>
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="icon" type="image/png" href="icons/icon32.png">
+</head>
+
+<body>
+
+  <!-- Top Application Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <img src="icons/icon32.png" alt="App Icon" class="brand-icon" draggable="false">
+      <h1 class="brand-title">Image Format Converter &amp; Compressor</h1>
+    </div>
+    <div class="header-actions">
+      <button id="browse-btn" class="btn btn-primary btn-sm">
+        + Add Images
+      </button>
+    </div>
+  </header>
+
+  <!-- Hidden File and Folder Inputs (Placed outside dropzone to avoid event bubbling interference) -->
+  <input type="file" id="file-input" multiple
+    accept="image/*,.png,.jpg,.jpeg,.jfif,.webp,.avif,.bmp,.ico,.gif,.svg,.tiff,.tif,.heic,.heif"
+    style="display: none;">
+  <input type="file" id="folder-input" webkitdirectory directory multiple style="display: none;">
+
+  <!-- Main Workspace Container -->
+  <main class="app-container">
+
+    <!-- Workbench Grid (Main Processing + Sidebar Settings) -->
+    <div class="workbench-grid">
+
+      <!-- Left Column: Upload & Queue -->
+      <section class="queue-section">
+
+        <!-- Drag & Drop Zone / Live Preview Surface -->
+        <div id="dropzone" class="dropzone" tabindex="0" role="region" aria-label="Image Workspace and Dropzone">
+          
+          <!-- Default Dropzone Content (Shown when no converted preview is active) -->
+          <div id="dropzone-default-content" class="dropzone-default-content">
+            <div class="dropzone-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <div class="dropzone-title">Drag &amp; Drop images or folders here</div>
+            <div class="dropzone-hint">or use action options below &bull; Paste clipboard images (Ctrl+V) supported</div>
+            <div class="dropzone-formats">
+              <span class="format-tag">PNG</span>
+              <span class="format-tag">JPG</span>
+              <span class="format-tag">WEBP</span>
+              <span class="format-tag">HEIC</span>
+              <span class="format-tag">AVIF</span>
+              <span class="format-tag">BMP</span>
+              <span class="format-tag">ICO</span>
+              <span class="format-tag">GIF</span>
+              <span class="format-tag">SVG</span>
+              <span class="format-tag">TIFF</span>
+            </div>
+          </div>
+
+          <!-- Preview Display Content -->
+          <div id="dropzone-preview-content" class="dropzone-preview-content" style="display: none;">
+            <div class="dropzone-preview-badge" id="dropzone-preview-badge">Loading preview...</div>
+            <img id="dropzone-preview-img" class="dropzone-preview-img" alt="Preview" draggable="false" />
+          </div>
+
+        </div>
+
+        <!-- Dedicated Action Toolbar Below Preview / Dropzone -->
+        <div class="preview-actions-bar" id="preview-actions-bar">
+          <div class="actions-left">
+            <button id="btn-import-files" class="btn btn-sm" type="button" title="Select image files from device">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              Import Images
+            </button>
+            <button id="btn-import-folder" class="btn btn-sm" type="button" title="Select an entire folder of images">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Import Folder
+            </button>
+          </div>
+          <div class="actions-right">
+            <button id="btn-view-newtab" class="btn btn-sm" type="button" style="display: none;" title="Open full converted image in a new tab">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              View Image
+            </button>
+            <button id="btn-download-preview" class="btn btn-sm btn-primary" type="button" style="display: none;" title="Download converted image">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download
+            </button>
+          </div>
+        </div>
+
+        <!-- Queue Toolbar -->
+        <div class="queue-toolbar">
+          <div class="queue-stats">
+            <div class="stat-item">
+              <span class="stat-label">Total Files:</span>
+              <span id="stat-total" class="stat-val">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Converted:</span>
+              <span id="stat-done" class="stat-val">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Space Saved:</span>
+              <span id="stat-saved" class="stat-val">0 B</span>
+            </div>
+          </div>
+          <div class="queue-actions">
+            <button id="btn-convert-all" class="btn btn-primary" disabled>
+              Convert All
+            </button>
+            <button id="btn-download-all" class="btn btn-success" disabled>
+              Download All (.zip)
+            </button>
+            <button id="btn-clear-all" class="btn btn-danger btn-sm" disabled>
+              Clear Queue
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State Message -->
+        <div id="empty-state" class="queue-empty-state">
+          <p>No images in queue. Drop files or paste images from clipboard to begin.</p>
+        </div>
+
+        <!-- Queue Cards List -->
+        <div id="queue-list" class="queue-list"></div>
+
+      </section>
+
+      <!-- Right Column: Settings Panel & Live Inspector -->
+      <aside class="sidebar-column">
+
+        <!-- Output Configuration Card -->
+        <section class="settings-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Output Configuration</h2>
+          </div>
+
+          <!-- Format Selector -->
+          <div class="form-group">
+            <label for="setting-format" class="form-label">Target Format</label>
+            <select id="setting-format" class="form-select">
+              <option value="webp" selected>WEBP - Web Picture Format</option>
+              <option value="png">PNG - Portable Network Graphics</option>
+              <option value="jpeg">JPEG - Joint Photographic Experts</option>
+              <option value="avif">AVIF - Next-Gen AV1 Image File</option>
+              <option value="bmp">BMP - Windows Bitmap</option>
+              <option value="ico">ICO - Windows Icon File</option>
+              <option value="gif">GIF - Graphics Interchange Format</option>
+              <option value="svg">SVG - Scalable Vector Wrapper</option>
+            </select>
+          </div>
+
+          <!-- Quality Slider -->
+          <div id="quality-group" class="form-group">
+            <div class="form-label">
+              <span>Compression Quality</span>
+              <span id="quality-val" class="label-value">85%</span>
+            </div>
+            <input type="range" id="setting-quality" class="form-range" min="10" max="100" value="85" step="1">
+          </div>
+
+          <!-- Resize Options -->
+          <div class="form-group">
+            <label for="setting-resize" class="form-label">Resolution Scaling</label>
+            <select id="setting-resize" class="form-select">
+              <option value="original" selected>Original Dimensions (100%)</option>
+              <option value="scale">Percentage Scaling</option>
+              <option value="custom">Custom Width &amp; Height</option>
+            </select>
+          </div>
+
+          <!-- Scale Percent Slider -->
+          <div id="scale-group" class="form-group" style="display: none;">
+            <div class="form-label">
+              <span>Scale Factor</span>
+              <span id="scale-val" class="label-value">100%</span>
+            </div>
+            <input type="range" id="setting-scale" class="form-range" min="10" max="200" value="100" step="5">
+          </div>
+
+          <!-- Custom Dimensions -->
+          <div id="custom-dims-group" class="form-group" style="display: none;">
+            <div class="resize-dimensions-group">
+              <div>
+                <label for="setting-width" class="form-label">Width (px)</label>
+                <input type="number" id="setting-width" class="form-input" placeholder="Auto" min="1">
+              </div>
+              <div>
+                <label for="setting-height" class="form-label">Height (px)</label>
+                <input type="number" id="setting-height" class="form-input" placeholder="Auto" min="1">
+              </div>
+            </div>
+            <label class="checkbox-group" style="margin-top: 6px;">
+              <input type="checkbox" id="setting-aspect" checked>
+              <span style="font-size: 12px; color: var(--text-secondary);">Preserve aspect ratio</span>
+            </label>
+          </div>
+
+          <!-- Background Fill Option -->
+          <div class="form-group">
+            <label for="setting-bg" class="form-label">Background Matte</label>
+            <select id="setting-bg" class="form-select">
+              <option value="transparent" selected>Transparent (Preserve Alpha)</option>
+              <option value="#ffffff">White Fill (#ffffff)</option>
+              <option value="#000000">Black Fill (#000000)</option>
+              <option value="#1f1f1f">Dark Surface (#1f1f1f)</option>
+            </select>
+          </div>
+
+        </section>
+
+        <!-- Item Details Card -->
+        <section class="inspector-panel" id="inspector-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Conversion Details</h2>
+          </div>
+
+          <!-- Empty State (Shown only when queue has no items) -->
+          <div id="inspector-empty" class="inspector-empty">
+            <p id="inspector-empty-text">Select an item from the queue to view technical details.</p>
+          </div>
+
+          <!-- Detailed Active State (Shown only when converted) -->
+          <div id="inspector-body" class="inspector-body" style="display: none;">
+
+            <!-- Item Title -->
+            <div class="inspector-filename" id="inspector-filename" title="">image.png</div>
+
+            <!-- Technical Metrics Grid -->
+            <div class="inspector-metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Original Dim</div>
+                <div class="metric-val" id="metric-orig-dim">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Output Dim</div>
+                <div class="metric-val" id="metric-conv-dim">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Original Size</div>
+                <div class="metric-val" id="metric-orig-size">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Output Size</div>
+                <div class="metric-val" id="metric-conv-size">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Compression</div>
+                <div class="metric-val" id="metric-savings">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Output Format</div>
+                <div class="metric-val" id="metric-format"
+                  style="color: var(--accent-primary); text-transform: uppercase;">-</div>
+              </div>
+            </div>
+
+            <!-- Inspector Action Buttons -->
+            <div class="inspector-actions">
+              <button id="btn-inspector-reconvert" class="btn btn-primary btn-sm"
+                style="flex: 1; justify-content: center;">
+                Re-convert Item
+              </button>
+              <button id="btn-inspector-download" class="btn btn-success btn-sm"
+                style="flex: 1; justify-content: center;">
+                Download
+              </button>
+            </div>
+
+          </div>
+        </section>
+
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- Inspection / Preview Modal -->
+  <div id="preview-modal" class="modal-backdrop">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Image Comparison &amp; Inspection</h3>
+        <button id="modal-close" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="preview-grid">
+          <div class="preview-card">
+            <h4 style="color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Original Image</h4>
+            <div class="preview-img-box">
+              <img id="preview-orig-img" class="preview-img" alt="Original Preview" draggable="false">
+            </div>
+            <div id="preview-orig-meta"
+              style="font-size: 12px; display: flex; flex-direction: column; gap: 4px; color: var(--text-secondary);">
+            </div>
+          </div>
+          <div class="preview-card">
+            <h4 style="color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Converted Output</h4>
+            <div class="preview-img-box">
+              <img id="preview-conv-img" class="preview-img" alt="Converted Output Preview" draggable="false">
+            </div>
+            <div id="preview-conv-meta"
+              style="font-size: 12px; display: flex; flex-direction: column; gap: 4px; color: var(--text-secondary);">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-close-btn" class="btn">Close</button>
+        <button id="modal-download-btn" class="btn btn-primary">Download File</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Footer -->
+  <footer class="app-footer">
+    <span>Image Format Converter &amp; Compressor</span>
+    <span>github.com/NSP-MO</span>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/vendor/jszip.min.js"></script>
+  <script src="js/vendor/libheif.js"></script>
+  <script src="js/converter.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>
