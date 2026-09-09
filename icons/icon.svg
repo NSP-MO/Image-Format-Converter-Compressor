@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#242428" />
+      <stop offset="100%" stop-color="#161619" />
+    </linearGradient>
+
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#008be5" />
+      <stop offset="50%" stop-color="#007acc" />
+      <stop offset="100%" stop-color="#0e639c" />
+    </linearGradient>
+
+    <linearGradient id="sunGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe169" />
+      <stop offset="50%" stop-color="#ffb703" />
+      <stop offset="100%" stop-color="#fb8500" />
+    </linearGradient>
+
+    <linearGradient id="badgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#008be5" />
+      <stop offset="100%" stop-color="#005e9c" />
+    </linearGradient>
+
+    <clipPath id="cardClip">
+      <rect x="36" y="36" width="440" height="440" rx="96" ry="96" />
+    </clipPath>
+  </defs>
+
+  <!-- Shadow -->
+  <rect x="32" y="44" width="448" height="448" rx="100" ry="100" fill="#000000" fill-opacity="0.38" />
+
+  <!-- Squircle Base -->
+  <rect x="36" y="36" width="440" height="440" rx="96" ry="96" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="16" stroke-linejoin="round" />
+  <rect x="46" y="46" width="420" height="420" rx="86" ry="86" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2" />
+
+  <!-- Landscape Content -->
+  <g clip-path="url(#cardClip)">
+    <!-- Sun -->
+    <circle cx="343" cy="170" r="48" fill="url(#sunGrad)" />
+
+    <!-- Ground -->
+    <rect x="0" y="368" width="512" height="144" fill="#121215" />
+
+    <!-- Rear Peak -->
+    <polygon points="215,368 328,220 440,368" fill="#0e639c" />
+
+    <!-- Front Peak -->
+    <polygon points="82,368 215,169 348,368" fill="#007acc" />
+    <polygon points="82,368 215,169 215,368" fill="#289bee" />
+  </g>
+
+  <!-- Conversion Badge -->
+  <g id="badge">
+    <circle cx="389" cy="389" r="87" fill="#000000" fill-opacity="0.35" />
+    <circle cx="389" cy="389" r="84" fill="url(#badgeBg)" stroke="#38bdf8" stroke-width="9" />
+    <circle cx="389" cy="389" r="77" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-width="1.5" />
+
+    <!-- Conversion Loop Arrows -->
+    <path d="M 353 358 A 46 46 0 0 1 430 368" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" />
+    <polygon points="422,342 446,370 415,378" fill="#ffffff" />
+
+    <path d="M 425 420 A 46 46 0 0 1 348 410" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" />
+    <polygon points="356,436 332,408 363,400" fill="#ffffff" />
+  </g>
+</svg>

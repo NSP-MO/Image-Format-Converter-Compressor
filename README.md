@@ -62,10 +62,12 @@ Image Format Converter & Compressor launches a dedicated, full-featured workspac
 │       ├── jszip.min.js   # Bundled offline ZIP archive generator
 │       └── libheif.js     # Bundled offline HEIC/HEIF WebAssembly decoder
 └── icons/
+    ├── icon.svg         # Master scalable vector graphic
     ├── icon16.png       # Toolbar small icon
     ├── icon32.png       # Standard favicon
     ├── icon48.png       # Extension management icon
-    └── icon128.png      # High-DPI extension icon
+    ├── icon128.png      # High-DPI extension icon
+    └── icon256.png      # High-definition store asset
 ```
 
 ---
