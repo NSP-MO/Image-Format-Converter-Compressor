@@ -6,6 +6,19 @@
 (function () {
   'use strict';
 
+  /**
+   * Escapes special characters to prevent HTML/XSS injection
+   */
+  function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // Instantiate Core Engine
   const engine = new ImageConverterEngine();
 
@@ -553,7 +566,9 @@
 
       if (selected.status === 'done' && selected.convertedResult) {
         const res = selected.convertedResult;
-        if (dom.dropzonePreviewImg) dom.dropzonePreviewImg.src = res.previewUrl;
+        if (dom.dropzonePreviewImg && dom.dropzonePreviewImg.src !== res.previewUrl) {
+          dom.dropzonePreviewImg.src = res.previewUrl;
+        }
         if (dom.dropzonePreviewBadge) {
           dom.dropzonePreviewBadge.textContent = `${res.convertedWidth} × ${res.convertedHeight} px • .${res.format.toUpperCase()} • ${ImageConverterEngine.formatBytes(res.convertedSize)}`;
         }
@@ -562,7 +577,9 @@
       } else {
         // Pending / unconverted image preview
         const previewSrc = selected.thumbUrl || '';
-        if (dom.dropzonePreviewImg) dom.dropzonePreviewImg.src = previewSrc;
+        if (dom.dropzonePreviewImg && previewSrc && dom.dropzonePreviewImg.src !== previewSrc) {
+          dom.dropzonePreviewImg.src = previewSrc;
+        }
         if (dom.dropzonePreviewBadge) {
           if (!selected.thumbUrl) {
             dom.dropzonePreviewBadge.textContent = 'Loading preview...';
@@ -583,6 +600,7 @@
       if (dom.dropzonePreviewContent) dom.dropzonePreviewContent.style.display = 'none';
       if (dom.btnViewNewTab) dom.btnViewNewTab.style.display = 'none';
       if (dom.btnDownloadPreview) dom.btnDownloadPreview.style.display = 'none';
+      if (dom.dropzonePreviewImg) dom.dropzonePreviewImg.src = '';
     }
   }
 
@@ -612,7 +630,7 @@
     if (totalCount === 0) {
       state.selectedItemId = null;
       if (dom.emptyState) dom.emptyState.style.display = 'block';
-      if (dom.queueList) dom.queueList.innerHTML = '';
+      if (dom.queueList) dom.queueList.replaceChildren();
       if (dom.btnConvertAll) dom.btnConvertAll.disabled = true;
       if (dom.btnDownloadAll) dom.btnDownloadAll.disabled = true;
       if (dom.btnClearAll) dom.btnClearAll.disabled = true;
@@ -636,18 +654,193 @@
     updateDropzoneSurface();
   }
 
+  function bindCardEvents(card, item) {
+    card.addEventListener('click', () => selectItem(item.id));
+    card.querySelector('.item-thumb')?.addEventListener('error', function () { this.src = 'icons/icon32.png'; });
+    card.querySelector('.item-controls')?.addEventListener('click', (e) => e.stopPropagation());
+    card.querySelector('[data-action="remove"]')?.addEventListener('click', () => removeItem(item.id));
+    card.querySelector('[data-action="convert"]')?.addEventListener('click', () => convertSingleItem(item));
+    card.querySelector('[data-action="reconvert"]')?.addEventListener('click', () => convertSingleItem(item));
+    card.querySelector('[data-action="download"]')?.addEventListener('click', () => downloadSingleItem(item));
+  }
+
+  function renderCardInfo(container, item) {
+    container.replaceChildren();
+
+    if (item.status === 'done' && item.convertedResult) {
+      const res = item.convertedResult;
+      const origSizeFormatted = ImageConverterEngine.formatBytes(res.originalSize);
+      const convSizeFormatted = ImageConverterEngine.formatBytes(res.convertedSize);
+      const savings = parseFloat(res.compressionRatio);
+
+      const segDim = document.createElement('div');
+      segDim.className = 'info-segment';
+      segDim.textContent = `${res.originalWidth}×${res.originalHeight} → ${res.convertedWidth}×${res.convertedHeight}`;
+
+      const segSize = document.createElement('div');
+      segSize.className = 'info-segment';
+      segSize.appendChild(document.createTextNode(`${origSizeFormatted} → `));
+      const strongSize = document.createElement('strong');
+      strongSize.style.color = 'var(--text-primary)';
+      strongSize.textContent = convSizeFormatted;
+      segSize.appendChild(strongSize);
+
+      const segSavings = document.createElement('div');
+      segSavings.className = 'info-segment';
+      const savingsSpan = document.createElement('span');
+      if (savings > 0) {
+        savingsSpan.className = 'saved-tag';
+        savingsSpan.textContent = `-${savings}%`;
+      } else {
+        savingsSpan.style.cssText = 'color: var(--text-muted); font-family: var(--font-mono); font-size: 11px;';
+        savingsSpan.textContent = `+${Math.abs(savings)}%`;
+      }
+      segSavings.appendChild(savingsSpan);
+
+      const segFmt = document.createElement('div');
+      segFmt.className = 'info-segment';
+      segFmt.style.cssText = 'color: var(--accent-primary); font-weight: 500; text-transform: uppercase;';
+      segFmt.textContent = `.${res.format}`;
+
+      container.append(segDim, segSize, segSavings, segFmt);
+    } else if (item.status === 'error') {
+      const segErr = document.createElement('div');
+      segErr.className = 'info-segment';
+      segErr.style.cssText = 'color: var(--danger); font-size: 11px;';
+      segErr.textContent = item.errorMessage || 'Conversion failed';
+      container.appendChild(segErr);
+    } else {
+      const origSizeFormatted = ImageConverterEngine.formatBytes(item.file.size);
+      const segOrig = document.createElement('div');
+      segOrig.className = 'info-segment';
+      segOrig.textContent = origSizeFormatted;
+
+      const segTarget = document.createElement('div');
+      segTarget.className = 'info-segment';
+      segTarget.appendChild(document.createTextNode('Target: '));
+      const strongFmt = document.createElement('strong');
+      strongFmt.style.cssText = 'color: var(--text-primary); text-transform: uppercase;';
+      strongFmt.textContent = `.${state.globalSettings.format}`;
+      segTarget.appendChild(strongFmt);
+
+      container.append(segOrig, segTarget);
+    }
+  }
+
+  function renderCardControls(container, item) {
+    container.replaceChildren();
+    const isProcessing = state.isProcessingAll;
+
+    if (item.status === 'done') {
+      const btnReconvert = document.createElement('button');
+      btnReconvert.className = 'btn btn-sm';
+      btnReconvert.dataset.action = 'reconvert';
+      btnReconvert.dataset.id = item.id;
+      btnReconvert.title = 'Re-convert with current settings';
+      btnReconvert.textContent = 'Re-convert';
+
+      const btnDownload = document.createElement('button');
+      btnDownload.className = 'btn btn-sm btn-primary';
+      btnDownload.dataset.action = 'download';
+      btnDownload.dataset.id = item.id;
+      btnDownload.title = 'Download Converted Image';
+      btnDownload.textContent = 'Download';
+
+      const btnRemove = document.createElement('button');
+      btnRemove.className = 'btn btn-sm btn-danger';
+      btnRemove.dataset.action = 'remove';
+      btnRemove.dataset.id = item.id;
+      btnRemove.title = 'Remove Item';
+      btnRemove.textContent = '×';
+      if (isProcessing) btnRemove.disabled = true;
+
+      container.append(btnReconvert, btnDownload, btnRemove);
+    } else {
+      const btnConvert = document.createElement('button');
+      btnConvert.className = 'btn btn-sm btn-primary';
+      btnConvert.dataset.action = 'convert';
+      btnConvert.dataset.id = item.id;
+      btnConvert.textContent = 'Convert';
+      if (isProcessing) btnConvert.disabled = true;
+
+      const btnRemove = document.createElement('button');
+      btnRemove.className = 'btn btn-sm btn-danger';
+      btnRemove.dataset.action = 'remove';
+      btnRemove.dataset.id = item.id;
+      btnRemove.title = 'Remove Item';
+      btnRemove.textContent = '×';
+      if (isProcessing) btnRemove.disabled = true;
+
+      container.append(btnConvert, btnRemove);
+    }
+  }
+
+  function createCardElement(item, isSelected, statusText, statusBadgeClass) {
+    const card = document.createElement('div');
+    card.className = `queue-item-card ${isSelected ? 'selected' : ''}`;
+    card.id = `item-${item.id}`;
+
+    const thumbBox = document.createElement('div');
+    thumbBox.className = 'item-thumb-box';
+    const thumbImg = document.createElement('img');
+    thumbImg.className = 'item-thumb';
+    thumbImg.src = item.thumbUrl || 'icons/icon32.png';
+    thumbImg.alt = 'thumbnail';
+    thumbImg.draggable = false;
+    thumbBox.appendChild(thumbImg);
+
+    const metaMain = document.createElement('div');
+    metaMain.className = 'item-meta-main';
+
+    const nameRow = document.createElement('div');
+    nameRow.className = 'item-name-row';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'item-name';
+    nameSpan.title = item.file.name;
+    nameSpan.textContent = item.file.name;
+
+    const badgeSpan = document.createElement('span');
+    badgeSpan.className = `status-badge ${statusBadgeClass}`;
+    badgeSpan.textContent = statusText;
+
+    nameRow.append(nameSpan, badgeSpan);
+
+    const infoRow = document.createElement('div');
+    infoRow.className = 'item-info-row';
+    infoRow.dataset.cacheKey = item.status + (item.convertedResult?.convertedSize || '') + state.globalSettings.format;
+    renderCardInfo(infoRow, item);
+
+    metaMain.append(nameRow, infoRow);
+
+    const controls = document.createElement('div');
+    controls.className = 'item-controls';
+    controls.dataset.status = item.status;
+    controls.dataset.processing = String(state.isProcessingAll);
+    renderCardControls(controls, item);
+
+    card.append(thumbBox, metaMain, controls);
+    return card;
+  }
+
   /**
-   * Renders the item cards in the queue
+   * Renders the item cards in the queue with non-destructive in-place reconciliation
    */
   function renderQueueList() {
     if (!dom.queueList) return;
-    dom.queueList.innerHTML = '';
 
+    const currentItemIds = new Set(state.queue.map(i => i.id));
+
+    // 1. Remove DOM cards that no longer exist in state.queue
+    Array.from(dom.queueList.children).forEach(child => {
+      const id = child.id.replace('item-', '');
+      if (!currentItemIds.has(id)) {
+        child.remove();
+      }
+    });
+
+    // 2. Add or update cards in-place
     state.queue.forEach(item => {
-      const card = document.createElement('div');
-      card.className = `queue-item-card ${item.id === state.selectedItemId ? 'selected' : ''}`;
-      card.id = `item-${item.id}`;
-
       let statusBadgeClass = 'status-pending';
       let statusText = 'Ready';
       if (item.status === 'processing') {
@@ -661,77 +854,43 @@
         statusText = 'Error';
       }
 
-      let infoContent = '';
-      if (item.status === 'done' && item.convertedResult) {
-        const res = item.convertedResult;
-        const origSizeFormatted = ImageConverterEngine.formatBytes(res.originalSize);
-        const convSizeFormatted = ImageConverterEngine.formatBytes(res.convertedSize);
-        const savings = parseFloat(res.compressionRatio);
-        const savingsDisplay = savings > 0 
-          ? `<span class="saved-tag">-${savings}%</span>` 
-          : `<span style="color: var(--text-muted); font-family: var(--font-mono); font-size: 11px;">+${Math.abs(savings)}%</span>`;
+      const isSelected = item.id === state.selectedItemId;
 
-        infoContent = `
-          <div class="info-segment">${res.originalWidth}×${res.originalHeight} &rarr; ${res.convertedWidth}×${res.convertedHeight}</div>
-          <div class="info-segment">${origSizeFormatted} &rarr; <strong style="color: var(--text-primary);">${convSizeFormatted}</strong></div>
-          <div class="info-segment">${savingsDisplay}</div>
-          <div class="info-segment" style="color: var(--accent-primary); font-weight: 500; text-transform: uppercase;">.${res.format}</div>
-        `;
-      } else if (item.status === 'error') {
-        infoContent = `
-          <div class="info-segment" style="color: var(--danger); font-size: 11px;">${item.errorMessage || 'Conversion failed'}</div>
-        `;
+      let card = document.getElementById(`item-${item.id}`);
+
+      if (card) {
+        card.classList.toggle('selected', isSelected);
+
+        const badge = card.querySelector('.status-badge');
+        if (badge && (badge.textContent !== statusText || !badge.classList.contains(statusBadgeClass))) {
+          badge.className = `status-badge ${statusBadgeClass}`;
+          badge.textContent = statusText;
+        }
+
+        const thumb = card.querySelector('.item-thumb');
+        if (thumb && item.thumbUrl && thumb.src !== item.thumbUrl) {
+          thumb.src = item.thumbUrl;
+        }
+
+        const infoRow = card.querySelector('.item-info-row');
+        const cacheKey = item.status + (item.convertedResult?.convertedSize || '') + state.globalSettings.format;
+        if (infoRow && infoRow.dataset.cacheKey !== cacheKey) {
+          infoRow.dataset.cacheKey = cacheKey;
+          renderCardInfo(infoRow, item);
+        }
+
+        const controls = card.querySelector('.item-controls');
+        if (controls && (controls.dataset.status !== item.status || controls.dataset.processing !== String(state.isProcessingAll))) {
+          controls.dataset.status = item.status;
+          controls.dataset.processing = String(state.isProcessingAll);
+          renderCardControls(controls, item);
+          bindCardEvents(card, item);
+        }
       } else {
-        const origSizeFormatted = ImageConverterEngine.formatBytes(item.file.size);
-        infoContent = `
-          <div class="info-segment">${origSizeFormatted}</div>
-          <div class="info-segment">Target: <strong style="color: var(--text-primary); text-transform: uppercase;">.${state.globalSettings.format}</strong></div>
-        `;
+        card = createCardElement(item, isSelected, statusText, statusBadgeClass);
+        bindCardEvents(card, item);
+        dom.queueList.appendChild(card);
       }
-
-      const thumbSrc = item.thumbUrl || 'icons/icon32.png';
-
-      card.innerHTML = `
-        <div class="item-thumb-box">
-          <img class="item-thumb" src="${thumbSrc}" alt="thumbnail" draggable="false" />
-        </div>
-        <div class="item-meta-main">
-          <div class="item-name-row">
-            <span class="item-name" title="${item.file.name}">${item.file.name}</span>
-            <span class="status-badge ${statusBadgeClass}">${statusText}</span>
-          </div>
-          <div class="item-info-row">
-            ${infoContent}
-          </div>
-        </div>
-        <div class="item-controls">
-          ${item.status === 'done' ? `
-            <button class="btn btn-sm" data-action="reconvert" data-id="${item.id}" title="Re-convert with current settings">
-              Re-convert
-            </button>
-            <button class="btn btn-sm btn-primary" data-action="download" data-id="${item.id}" title="Download Converted Image">
-              Download
-            </button>
-          ` : `
-            <button class="btn btn-sm btn-primary" data-action="convert" data-id="${item.id}" ${state.isProcessingAll ? 'disabled' : ''}>
-              Convert
-            </button>
-          `}
-          <button class="btn btn-sm btn-danger" data-action="remove" data-id="${item.id}" title="Remove Item" ${state.isProcessingAll ? 'disabled' : ''}>
-            &times;
-          </button>
-        </div>
-      `;
-
-      card.addEventListener('click', () => selectItem(item.id));
-      card.querySelector('.item-thumb')?.addEventListener('error', function () { this.src = 'icons/icon32.png'; });
-      card.querySelector('.item-controls')?.addEventListener('click', (e) => e.stopPropagation());
-      card.querySelector('[data-action="remove"]')?.addEventListener('click', () => removeItem(item.id));
-      card.querySelector('[data-action="convert"]')?.addEventListener('click', () => convertSingleItem(item));
-      card.querySelector('[data-action="reconvert"]')?.addEventListener('click', () => convertSingleItem(item));
-      card.querySelector('[data-action="download"]')?.addEventListener('click', () => downloadSingleItem(item));
-
-      dom.queueList.appendChild(card);
     });
   }
 
@@ -1007,21 +1166,37 @@
     if (dom.previewOrigImg) dom.previewOrigImg.src = item.thumbUrl || 'icons/icon128.png';
     if (dom.previewConvImg) dom.previewConvImg.src = res.previewUrl;
 
+    function createMetaRow(label, value, isTag = false) {
+      const row = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = label + ': ';
+      row.appendChild(strong);
+      if (isTag) {
+        const span = document.createElement('span');
+        span.className = 'saved-tag';
+        span.textContent = value;
+        row.appendChild(span);
+      } else {
+        row.appendChild(document.createTextNode(value));
+      }
+      return row;
+    }
+
     if (dom.previewOrigMeta) {
-      dom.previewOrigMeta.innerHTML = `
-        <div><strong>File:</strong> ${res.originalName}</div>
-        <div><strong>Dimensions:</strong> ${res.originalWidth} × ${res.originalHeight} px</div>
-        <div><strong>File Size:</strong> ${ImageConverterEngine.formatBytes(res.originalSize)}</div>
-      `;
+      dom.previewOrigMeta.replaceChildren(
+        createMetaRow('File', res.originalName),
+        createMetaRow('Dimensions', `${res.originalWidth} × ${res.originalHeight} px`),
+        createMetaRow('File Size', ImageConverterEngine.formatBytes(res.originalSize))
+      );
     }
 
     if (dom.previewConvMeta) {
-      dom.previewConvMeta.innerHTML = `
-        <div><strong>File:</strong> ${res.name}</div>
-        <div><strong>Dimensions:</strong> ${res.convertedWidth} × ${res.convertedHeight} px</div>
-        <div><strong>File Size:</strong> ${ImageConverterEngine.formatBytes(res.convertedSize)}</div>
-        <div><strong>Compression:</strong> <span class="saved-tag">${res.compressionRatio}%</span></div>
-      `;
+      dom.previewConvMeta.replaceChildren(
+        createMetaRow('File', res.name),
+        createMetaRow('Dimensions', `${res.convertedWidth} × ${res.convertedHeight} px`),
+        createMetaRow('File Size', ImageConverterEngine.formatBytes(res.convertedSize)),
+        createMetaRow('Compression', `${res.compressionRatio}%`, true)
+      );
     }
 
     if (dom.modal) dom.modal.classList.add('active');
