@@ -32,3 +32,5 @@ __pycache__/
 
 # Internal Automation & Helper Scripts
 exec/
+Convert-Image-Format/
+Convert-Image-Format-Firefox.zip

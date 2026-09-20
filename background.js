@@ -1,10 +1,12 @@
 /**
- * Image Format Converter & Compressor - Background Service Worker
+ * Image Format Converter & Compressor - Background Script
  * Handles extension action clicks and opens the standalone offline conversion workspace.
  */
 
-chrome.action.onClicked.addListener((tab) => {
-  chrome.tabs.create({
-    url: chrome.runtime.getURL('app.html')
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
+browserAPI.action.onClicked.addListener(() => {
+  browserAPI.tabs.create({
+    url: browserAPI.runtime.getURL('app.html')
   });
 });
